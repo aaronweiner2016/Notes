@@ -6,6 +6,9 @@ const util = require("util");
 const app = express();
 const PORT = 8080;
 const asyncReadFile = util.promisify(fs.readFile);
+const writeFile = util.promisify(fs.writeFile);
+const { v4: uuidv4 } = require('uuid');
+
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -20,30 +23,35 @@ app.get("/api/notes", (req, res) => {
         res.json(parsedNotes)
     });
 })
-const notesArr = [];
+
 app.post('/api/notes', (req, res) => {
+    const newNote = req.body;
+    newNote.id = uuidv4();
+    console.log(newNote);
+    asyncReadFile("./db/db.json", "utf8").then((result) => {
+        const parsedNotes = JSON.parse(result)
+        parsedNotes.push(newNote);
+        writeFile("./db/db.json", JSON.stringify(parsedNotes, null, "\t")).then(() => {
+            res.json(parsedNotes);
+        })
+    });
 
-    const newPerson = req.body;
-    console.log(newPerson);
-    notesArr.push(newPerson);
-
-    res.json(newPerson);
 });
 
 app.delete('/api/notes/:id', (req, res) => {
 
     const chosen = req.params.id;
+    console.log(res);
+    console.log(chosen);
 
-    // console.log(chosen);
+    asyncReadFile("./db/db.json", "utf8").then((result) => {
+        const parsedNotes = JSON.parse(result)
+        const filteredNotes = parsedNotes.filter(val => val.id !== chosen);
+        writeFile("./db/db.json", JSON.stringify(filteredNotes, null, "\t")).then(() => {
+            res.json(filteredNotes);
+        })
+    });
 
-
-    // for (let i = 0; i < current.length; i++) {
-    //     if (chosen === current[i].routeName) {
-    //         return res.json(current[i]);
-    //     }
-    // }
-
-    // return res.json(false);
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, './public/index.html')));
